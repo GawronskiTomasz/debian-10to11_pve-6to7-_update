@@ -1,0 +1,47 @@
+---
+- hosts: 10.45.0.199
+  
+  
+  tasks:
+      - name: "Apt upgrade"
+        apt:
+         upgrade: full
+         update_cache: yes
+  
+      - name: "Replace source list buster -> bullseye"
+        replace:
+          path: /etc/apt/sources.list
+          regexp: '{{item.From}}'
+          replace: '{{item.To}}'
+        with_items:
+          - { From: 'buster\/updates', To: 'bullseye-security'}
+          - { From: 'buster', To: 'bullseye'}
+
+      - name: "Remove PVE 6 repository"
+        file:
+          path: '{{item}}'           
+          state: absent
+        with_items:
+          - /etc/apt/sources.list.d/pve-enterprise.list
+          - /etc/apt/sources.list.d/pve-install-repo.list  
+
+      - name: "Add proxmoxve archive repository keys"
+        apt_key:
+          url: "http://download.proxmox.com/debian/proxmox-release-bullseye.gpg"
+          state: present
+
+      - name: "Add proxmoxve archive repository and update cache"
+        apt_repository:
+          repo: "deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription"
+          state: present
+          update_cache: yes
+
+      - name: "Update package cache"
+        apt:
+          update_cache: yes
+          autoclean: yes
+
+      - name: "Done"
+        debug:
+          msg:
+            -  - "Now, the manual upgrade process: apt upgrade --without-new-pkgs; apt full-upgrade"
